@@ -1,6 +1,7 @@
 package com.na.mb_backend.User;
 
 import com.na.mb_backend.Model.Role;
+import com.na.mb_backend.Security.token.Token;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -20,7 +21,7 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userID;
+    private Integer userID;
 
     @Column(nullable = false)
     private String password;
@@ -34,6 +35,9 @@ public class User implements UserDetails {
 
     private boolean mfaEnabled;
     private String secret;
+
+    @OneToMany(mappedBy = "user")
+    private List<Token> tokens;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
