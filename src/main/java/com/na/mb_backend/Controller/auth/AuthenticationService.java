@@ -1,8 +1,7 @@
 package com.na.mb_backend.Controller.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.na.mb_backend.Model.Role;
-import com.na.mb_backend.Repository.UserRepository;
+import com.na.mb_backend.User.UserRepository;
 import com.na.mb_backend.Security.JwtService;
 import com.na.mb_backend.Security.token.Token;
 import com.na.mb_backend.Security.token.TokenRepository;
@@ -34,7 +33,7 @@ public class AuthenticationService {
                 .lastname(request.getLastname())
                 .email(request.getEmail())
                 .password(encoder.encode(request.getPassword()))
-                .role(Role.USER)
+                .role(request.getRole())
                 .build();
         var saveduser = repository.save(user);
         var jwtToken = jwtService.generateToken(user);

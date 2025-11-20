@@ -1,4 +1,4 @@
-package com.na.mb_backend.Repository;
+package com.na.mb_backend.User;
 
 import com.na.mb_backend.User.User;
 import org.springframework.data.jpa.repository.JpaRepository;
