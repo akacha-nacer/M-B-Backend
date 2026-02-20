@@ -18,4 +18,6 @@ public interface TokenRepository  extends JpaRepository<Token,Integer> {
 
     Optional<Token> findByTokenAndTokenType(String token, TokenType tokenType);
 
+    List<Token> findAllByTokenTypeAndExpiredFalseAndRevokedFalse(TokenType tokenType);
+
 }

@@ -2,6 +2,7 @@ package com.na.mb_backend.Controller.auth;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.na.mb_backend.User.UserDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,5 @@ public class AuthenticationResponse {
     private String refreshToken;
     private boolean mfaEnabled;
     private String secretImageUri;
+    private UserDTO user;
 }

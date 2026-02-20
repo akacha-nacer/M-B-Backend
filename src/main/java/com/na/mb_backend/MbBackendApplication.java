@@ -6,11 +6,13 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 import static com.na.mb_backend.User.Role.ADMIN;
 import static com.na.mb_backend.User.Role.MANAGER;
 
 @SpringBootApplication
+@EnableAsync
 public class MbBackendApplication {
 
     public static void main(String[] args) {

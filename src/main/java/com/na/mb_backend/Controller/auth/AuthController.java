@@ -2,11 +2,15 @@ package com.na.mb_backend.Controller.auth;
 
 import com.na.mb_backend.Controller.forgot_password.ForgotPasswordRequest;
 import com.na.mb_backend.Controller.forgot_password.ResetPasswordRequest;
+import com.na.mb_backend.User.User;
+import com.na.mb_backend.User.UserDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -54,6 +58,7 @@ public class AuthController {
         service.resetPassword(request);
         return ResponseEntity.ok("Password successfully reset.");
     }
+
 
 
 }

@@ -2,8 +2,11 @@ package com.na.mb_backend.Controller.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.na.mb_backend.Controller.forgot_password.ForgotPasswordRequest;
+import com.na.mb_backend.Controller.forgot_password.RateLimitService;
 import com.na.mb_backend.Controller.forgot_password.ResetPasswordRequest;
+import com.na.mb_backend.Controller.forgot_password.TooManyRequestsException;
 import com.na.mb_backend.User.Role;
+import com.na.mb_backend.User.UserDTO;
 import com.na.mb_backend.User.UserRepository;
 import com.na.mb_backend.Security.JwtService;
 import com.na.mb_backend.Security.token.Token;
@@ -15,16 +18,23 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.bridge.Message;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +47,7 @@ public class AuthenticationService {
     private final TokenRepository tokenRepository;
     @Autowired
     private JavaMailSender mailSender;
+    private final RateLimitService rateLimitService;
 
     public AuthenticationResponse register(RegisterRequest request) {
         var user = User.builder()
@@ -67,6 +78,7 @@ public class AuthenticationService {
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
+                .user(mapToDTO(user))
                 .build();
 
     }
@@ -117,16 +129,29 @@ public class AuthenticationService {
         }
     }
 
-    public void forgotPassword(ForgotPasswordRequest forgotPasswordRequest){
+    public void forgotPassword(ForgotPasswordRequest forgotPasswordRequest) {
+        System.out.println("Request thread: " + Thread.currentThread().getName());
+
+        if (!rateLimitService.isAllowed(forgotPasswordRequest.email(), 3, 15)) {
+            throw new TooManyRequestsException("Too many reset attempts. Please try again later.");
+        }
 
         var userOptional = repository.findByEmail(forgotPasswordRequest.email());
-        if (userOptional.isEmpty()){
+
+        if (userOptional.isEmpty()) {
+            try {
+                Thread.sleep(new Random().nextInt(100, 300));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             return;
         }
+
         var user = userOptional.get();
-        String resetToken = UUID.randomUUID().toString();
+        String resetToken = generateSecureToken();
+
         var token = Token.builder()
-                .token(resetToken)
+                .token(encoder.encode(resetToken))
                 .tokenType(TokenType.PASSWORD_RESET)
                 .expired(false)
                 .revoked(false)
@@ -134,39 +159,81 @@ public class AuthenticationService {
                 .user(user)
                 .build();
         tokenRepository.save(token);
-        sendResetMail(user.getEmail(), resetToken);
 
+        final String email = user.getEmail();
+        CompletableFuture.runAsync(() -> sendResetMailSync(email, resetToken));
     }
 
-    public void resetPassword (ResetPasswordRequest request){
-        if (!request.newPassword().equals(request.confirmPassword())){
-            throw new RuntimeException("Passwords do not match");
+    private String generateSecureToken() {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] tokenBytes = new byte[32];
+        secureRandom.nextBytes(tokenBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        // Use IllegalArgumentException for consistent error handling
+        if (!request.newPassword().equals(request.confirmPassword())) {
+            throw new IllegalArgumentException("Passwords do not match");
         }
 
-        var token = tokenRepository.findByTokenAndTokenType(request.token(), TokenType.PASSWORD_RESET).orElseThrow(()-> new RuntimeException("Invalid token"));
+        var tokens = tokenRepository.findAllByTokenTypeAndExpiredFalseAndRevokedFalse(TokenType.PASSWORD_RESET);
 
-        if (token.getExpiryDate().isBefore(LocalDateTime.now())){
-            throw new RuntimeException("Token expired");
+        Token validToken = null;
+        for (Token token : tokens) {
+            if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
+                continue;
+            }
+
+            if (encoder.matches(request.token(), token.getToken())) {
+                validToken = token;
+                break;
+            }
         }
-        var user = token.getUser();
+
+        if (validToken == null) {
+            throw new IllegalArgumentException("Invalid or expired token");
+        }
+
+        var user = validToken.getUser();
+
+        if (encoder.matches(request.newPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("New password cannot be the same as current password");
+        }
+
         user.setPassword(encoder.encode(request.newPassword()));
         repository.save(user);
 
-        token.setExpired(true);
-        token.setRevoked(true);
-        tokenRepository.save(token);
-
+        revokeAllUserTokens(user);
+        validToken.setExpired(true);
+        validToken.setRevoked(true);
+        tokenRepository.save(validToken);
     }
 
-    private void sendResetMail(String email, String token){
-        String resetLink = "http://localhost:3000/reset-password?token="+token;
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("Password Reset Request");
-        message.setText("Click the link below to reset your password:\n\n"
-                + resetLink +
-                "\n\nThis link expires in 15 minutes.");
-        mailSender.send(message);
+    private void sendResetMailSync(String email, String token) {
+        System.out.println("Email thread: " + Thread.currentThread().getName());
+        try {
+            String resetLink = "http://localhost:3000/mille-une-bouchees/resetPassword?token=" + token;
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Password Reset Request");
+            message.setText("Click the link below to reset your password:\n\n"
+                    + resetLink +
+                    "\n\nThis link expires in 15 minutes.");
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send reset email to " + email + ": " + e.getMessage());
+        }
+    }
+
+    private UserDTO mapToDTO(User user) {
+        return UserDTO.builder()
+                .userID(user.getUserID())
+                .email(user.getEmail())
+                .firstname(user.getFirstname())
+                .lastname(user.getLastname())
+                .role(user.getRole())
+                .build();
     }
 
 
