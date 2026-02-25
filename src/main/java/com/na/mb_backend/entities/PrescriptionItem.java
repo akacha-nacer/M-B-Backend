@@ -2,11 +2,13 @@ package com.na.mb_backend.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "prescription_items", indexes = {
         @Index(name = "idx_item_prescription", columnList = "prescription_id"),
-        @Index(name = "idx_item_dispensed", columnList = "dispensed")
+        @Index(name = "idx_item_medicine", columnList = "medicine_id")
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class PrescriptionItem {
@@ -19,11 +21,12 @@ public class PrescriptionItem {
     @JoinColumn(name = "prescription_id", nullable = false)
     private Prescription prescription;
 
-    @Column(nullable = false)
-    private String medicineName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "medicine_id")
+    private Medicine medicine;
 
     @Column
-    private String dosage;
+    private String customMedicineName;
 
     @Column(columnDefinition = "TEXT")
     private String instructions;
@@ -32,30 +35,36 @@ public class PrescriptionItem {
     private Integer monthNumber;
 
     @Column(nullable = false)
-    private Integer quantity;
+    private Integer quantityPrescribed;
 
     @Column(nullable = false)
     @Builder.Default
-    private Boolean dispensed = false;
+    private Integer quantityDispensed = 0;
 
-    @Column
-    private LocalDateTime dispensedAt;
+    @OneToMany(mappedBy = "prescriptionItem", cascade = CascadeType.ALL,
+            orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<DispenseEvent> dispenseEvents = new ArrayList<>();
 
-    @Column
-    private String dispensedBy;
 
 
-    public boolean isDispensable() {
-        if (Boolean.TRUE.equals(dispensed)) return false;
-        if (prescription.getStatus() == PrescriptionStatus.CANCELLED) return false;
-        if (prescription.getStatus() == PrescriptionStatus.COMPLETED) return false;
-        return monthNumber <= prescription.getCurrentMonth();
+    public boolean isFullyDispensed() {
+        return quantityDispensed >= quantityPrescribed;
     }
 
 
-    public void markDispensed(String dispensedByUsername) {
-        this.dispensed = true;
-        this.dispensedAt = LocalDateTime.now();
-        this.dispensedBy = dispensedByUsername;
+    public int getQuantityRemaining() {
+        return Math.max(0, quantityPrescribed - quantityDispensed);
+    }
+
+    public String getDisplayName() {
+        return medicine != null ? medicine.getFullName() : customMedicineName;
+    }
+
+    public boolean isDispensable() {
+        if (isFullyDispensed()) return false;
+        if (prescription.getStatus() == PrescriptionStatus.CANCELLED) return false;
+        if (prescription.getStatus() == PrescriptionStatus.COMPLETED) return false;
+        return monthNumber <= prescription.getCurrentMonth();
     }
 }

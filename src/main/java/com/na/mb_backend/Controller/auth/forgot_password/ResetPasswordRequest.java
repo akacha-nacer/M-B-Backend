@@ -1,4 +1,4 @@
-package com.na.mb_backend.Controller.forgot_password;
+package com.na.mb_backend.Controller.auth.forgot_password;
 
 public record ResetPasswordRequest(
         String token,

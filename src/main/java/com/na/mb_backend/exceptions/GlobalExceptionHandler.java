@@ -1,4 +1,4 @@
-package com.na.mb_backend.Controller.forgot_password;
+package com.na.mb_backend.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

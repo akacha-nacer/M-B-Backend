@@ -1,10 +1,10 @@
 package com.na.mb_backend.Controller.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.na.mb_backend.Controller.forgot_password.ForgotPasswordRequest;
-import com.na.mb_backend.Controller.forgot_password.RateLimitService;
-import com.na.mb_backend.Controller.forgot_password.ResetPasswordRequest;
-import com.na.mb_backend.Controller.forgot_password.TooManyRequestsException;
+import com.na.mb_backend.Controller.auth.forgot_password.ForgotPasswordRequest;
+import com.na.mb_backend.Controller.auth.forgot_password.RateLimitService;
+import com.na.mb_backend.Controller.auth.forgot_password.ResetPasswordRequest;
+import com.na.mb_backend.exceptions.TooManyRequestsException;
 import com.na.mb_backend.User.Role;
 import com.na.mb_backend.User.UserDTO;
 import com.na.mb_backend.User.UserRepository;
@@ -16,24 +16,19 @@ import com.na.mb_backend.User.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.aspectj.bridge.Message;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Service
