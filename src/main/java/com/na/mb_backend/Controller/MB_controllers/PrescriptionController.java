@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/prescriptions")
+@RequestMapping("/api/v1/prescriptions")
 @RequiredArgsConstructor
 public class PrescriptionController {
     private final PrescriptionService prescriptionService;

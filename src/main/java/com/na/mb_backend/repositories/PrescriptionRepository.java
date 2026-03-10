@@ -15,9 +15,6 @@ import java.util.Optional;
 @Repository
 public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
 
-    Optional<Prescription> findByPrescriptionNumber(String prescriptionNumber);
-
-    boolean existsByPrescriptionNumber(String prescriptionNumber);
 
     List<Prescription> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 

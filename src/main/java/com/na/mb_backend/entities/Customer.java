@@ -1,4 +1,5 @@
 package com.na.mb_backend.entities;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -39,7 +40,7 @@ public class Customer {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-
+    @JsonIgnore
     @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY)
     @Builder.Default
     private List<Prescription> prescriptions = new ArrayList<>();
